@@ -1,0 +1,5 @@
+//TODO
+- need to implement a feature to get the journal entry for a given date.
+- need to add discord reminder feature of journal of the day 
+- need to implement a feature to only track messages from the channel with user who has started the journal.(DONE)
+- add a feature to enter multiple journal entries in a day.
