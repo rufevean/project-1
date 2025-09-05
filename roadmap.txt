@@ -2,9 +2,11 @@
 - need to implement a feature to get the journal entry for a given date.
 - need to add discord reminder feature of journal of the day.(NEEDS TO BE IMPLEMENTED)(implement using a cronjob)
 - need to connect with mongodb.(DONE)
-- setup schemas in mongodb 
+- setup schemas in mongodb (DONE)
 - need to implement a feature to only track messages from the channel with user who has started the journal.(DONE)
 - add a feature to enter multiple journal entries in a day.(DONE)
+- add a way to show user last n journal entries 
+- add a way to show user his journal track.
 - optimise the code 
 
 
