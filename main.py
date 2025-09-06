@@ -3,7 +3,7 @@ import os
 import connection
 import discord
 from dotenv import load_dotenv
-
+import pymongo
 
 now = datetime.now()
 start_of_day = datetime(now.year, now.month, now.day)
@@ -15,7 +15,7 @@ load_dotenv()
 db = connection.get_connection()
 users = db.get_collection("users")
 journals_collections = db.get_collection("journals")
-
+tasks_collections = db.get_collection("tasks")
 current_journal_entries = {}
 user_channel_map = {}
 
@@ -26,10 +26,9 @@ class MyClient(discord.Client):
         super().__init__(*args, **kwargs)
 
     async def on_ready(self):
-        print(f"Logged in as {self.user}")
+        return
 
     async def on_message(self, message):
-        print(f"current_journal_entries: {current_journal_entries}")
         userId = message.author.id
         if message.author == self.user:
             return
@@ -143,10 +142,119 @@ class MyClient(discord.Client):
                     {"$set": {"reminder": True}},
                 )
                 return
+        if message.content.startswith("vivi show"):
+            content = int(message.content.split(" ")[-1])
+            await message.channel.send(f"Showing latest {content} days of journal")
+            journal = (
+                journals_collections.find({"user_id": userId})
+                .sort({"created_at": -1})
+                .limit(content)
+            )
+            for i in range(content):
+                await message.channel.send(f"Day {i+1}: {journal[i]['data']}")
+
+            print(journal[0])
+            return
+        if message.content.startswith("vivi task"):
+            command = message.content.split(" ")[2]
+            if command == "list":
+                await message.channel.send("Listing all tasks")
+                tasks = tasks_collections.find({"user_id": userId})
+                for task in tasks:
+                    await message.channel.send(
+                        f"Task: {task['id']} with note {task['note']} and progress {task['progress']}"
+                    )
+                return
+            if command == "add":
+                print(userId, "userId")
+                note = " ".join(message.content.split(" ")[3:])
+                if note == "":
+                    await message.channel.send("Please provide a note for the task")
+                    return
+                try:
+                    latest_task = tasks_collections.find_one(
+                        {"user_id": userId}, sort=[("date", pymongo.DESCENDING)]
+                    )
+                    print(latest_task, "latest task")
+                except Exception as e:
+                    print(e, "error")
+                    latest_task = None
+                if latest_task is None:
+                    id = 1
+                else:
+                    print(" IS THIS STATEMENT REACHED")
+                    id = latest_task["id"] + 1
+                tasks_collections.insert_one(
+                    {
+                        "user_id": userId,
+                        "id": id,
+                        "note": note,
+                        "progress": "todo",
+                        "date": datetime.now(),
+                    }
+                )
+                await message.channel.send("Adding a task")
+                await message.channel.send(
+                    f'Task added with id {id} and note "{note}" and progress todo'
+                )
+                return
+            if command == "edit":
+                id = message.content.split(" ")[3]
+                task = tasks_collections.find_one({"user_id": userId, "id": int(id)})
+                if task is None:
+                    await message.channel.send(f"Task not found with id {id}")
+                    return
+                command_type = message.content.split(" ")[4]
+                if command_type == "note":
+                    note = " ".join(message.content.split(" ")[5:])
+                    if note == "":
+                        await message.channel.send("Please provide a note for the task")
+                        return
+                    tasks_collections.update_one(
+                        {"user_id": userId, "id": int(id)}, {"$set": {"note": note}}
+                    )
+                    await message.channel.send(f"Task edited with note {note}")
+                if command_type == "progress":
+                    progress = message.content.split(" ")[5]
+                    if progress == "":
+                        await message.channel.send(
+                            "Please provide a progress for the task"
+                        )
+                        return
+                    tasks_collections.update_one(
+                        {"user_id": userId, "id": int(id)},
+                        {"$set": {"progress": progress}},
+                    )
+                    await message.channel.send(f"Task edited with progress {progress}")
+            if command == "remove":
+                try:
+                    id = message.content.split(" ")[3]
+                except:
+                    await message.channel.send("Please provide a id for the task")
+                    return
+                task = tasks_collections.delete_one({"user_id": userId, "id": int(id)})
+                if task is None:
+                    await message.channel.send(f"Task not found with id {id}")
+                    return
+                await message.channel.send(f"Task removed with id {id}")
+                return
+            if command == "show":
+                try:
+                    id = int(message.content.split(" ")[3])
+                except:
+                    await message.channel.send("Please provide a valid id of the task")
+                    return
+                task = tasks_collections.find_one({"user_id": userId, "id": id})
+                if task is None:
+                    await message.channel.send(f"Task not found with id {id}")
+                    return
+                await message.channel.send(
+                    f"Task with id {id} and note {task['note']} and progress {task['progress']}"
+                )
+                return
 
 
 intents = discord.Intents.default()
 intents.message_content = True
 client = MyClient(intents=intents)
-print(os.getenv("DISCORD_TOKEN"))
 client.run(os.getenv("DISCORD_TOKEN"))

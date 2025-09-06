@@ -8,20 +8,5 @@
 - add a way to show user last n journal entries 
 - add a way to show user his journal track.
 - optimise the code 
+- add task reminders 
 
-
-@NOTES
-
-- users 
-  - user_id ( discord id )
-  - reminder ( boolean )
-  - daily ( boolean )
-  - created_at ( date )
-  - updated_at ( date )
-- journals
-  - user_id ( discord id )
-  - date ( date )
-  - journal ( string )
-  - created_at ( date )
-  - updated_at ( date )
-  - journal_flag ( boolean )
